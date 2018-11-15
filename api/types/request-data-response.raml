@@ -1,0 +1,15 @@
+#%RAML 1.0 DataType
+
+description: |
+  List of the request parameters received by this endpoint.
+type: object
+properties:
+  headers:
+    description: Map of request headers
+    type: !include cookies-list.raml
+  method:
+    type: string
+    description: A HTTP method name used with the request
+  body?:
+    type: string
+    description: The request body, if any.

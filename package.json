@@ -1,0 +1,26 @@
+{
+  "name": "web-sdk",
+  "version": "0.0.1",
+  "description": "A proof of concept for Web SDK standard",
+  "main": "web-sdk.js",
+  "scripts": {
+    "test": "exit 0",
+    "prepare": "node prepare-amf.js"
+  },
+  "author": "Pawel Psztyc",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@webcomponents/webcomponentsjs": "^2.1.3",
+    "amf-client-js": "^3.0.0",
+    "browserify": "16.2.3",
+    "fs-extra": "^7.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/advanced-rest-client/web-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/advanced-rest-client/web-sdk/issues",
+    "email": "arc@mulesoft.com"
+  }
+}

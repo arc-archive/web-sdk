@@ -1,0 +1,174 @@
+#%RAML 1.0
+title: Advanced REST Client Echo service API
+version: v1
+baseUri: https://{env}.advancedrestclient.com/
+mediaType: [application/json]
+
+baseUriParameters:
+  env:
+    type: string
+    default: env
+    examples:
+      Default: env
+      Demo: demo
+traits:
+  RequestResponse:
+    responses:
+      200:
+        body:
+          application/json:
+            description: |
+              Successful response returns request data as a JSON object.
+            type: RequestDataResponse
+types:
+  BaseResponse:
+    type: object
+    properties:
+      success:
+        type: boolean
+        description: Wherther or not the operation succeeded.
+  AuthorizationResponse:
+    type: BaseResponse
+    properties:
+      authorized:
+        type: boolean
+        description: Wherther or not the user is authenticated.
+  CookieList: !include types/cookies-list.raml
+  RequestDataResponse: !include types/request-data-response.raml
+  CookieListResponse: [BaseResponse, CookieList]
+
+/cookies:
+  description: |
+    An endpoint that simulates cookies behaviors.
+    It can create, list or delete cookies by sending appropriate `set-cookie`
+    header to the client.
+  post:
+    displayName: Create a cookie(s)
+    description: |
+      Creates a cookie by sending `set-cookie` header to the client.
+      A list of cookies to be created is passed in the request body as a
+      list of key-value pairs of cookie name and the value.
+      Use `/cookies/set` endpoint if you need to set cookies via `GET`
+      request.
+    body:
+      application/json:
+        type: CookieList
+    responses:
+      200:
+        headers:
+          Set-Cookie:
+            description: A `set-cookie` header  with passed to the server list of cookies.
+        body:
+          type: BaseResponse
+  get:
+    displayName: List cookies
+    description: |
+      Lists cookies received by the server.
+    headers:
+      Cookie:
+        required: false
+        description: Cookies to be read.
+    responses:
+      200:
+        body:
+          type: CookieListResponse
+  delete:
+    displayName: Remove a cookie(s)
+    description: |
+      Removes a cookie by sending `set-cookie` header to the client.
+      A list of cookies to be deleted is passed in the request body as a
+      list of key-value pairs of cookie names and the values.
+      You do not need to provide cookie values in the request body as they will
+      be ignored by the server. Prepare a request body as:
+      ```
+      {
+        'cookieName': '',
+        'otherCookie': true // whatever value.
+      }
+      ```
+      Use `/cookies/delete` endpoint if you need to delete cookies via `GET`
+      request.
+    body:
+      application/json:
+        type: CookieList
+    responses:
+      200:
+        headers:
+          Set-Cookie:
+            description: A `set-cookie` header  with passed to the server list of cookies.
+        body:
+          type: BaseResponse
+  /set:
+    get:
+      displayName: Create cookies
+      description: |
+        Creates a cookie by sending `set-cookie` header to the client.
+        A list of cookies to be created is passed in the request body as a
+        list of key-value pairs of cookie name and the value.
+        Use `POST /cookies` endpoint if you can use `POST` request.
+      queryParameters:
+        type: CookieList
+      responses:
+        200:
+          headers:
+            Set-Cookie:
+              description: A `set-cookie` header  with passed to the server list of cookies.
+          body:
+            type: BaseResponse
+  /delete:
+    get:
+      displayName: Remove cookies
+      description: |
+        Removes a cookie by sending `set-cookie` header to the client.
+        A list of cookies to be deleted is passed in the request body as a
+        list of key-value pairs of cookie names and the values.
+        You do not need to provide a cookie value as it will be ignored by the server.
+        The request should be similar to:
+        ```
+        DELETE /cookies?cookieName&otherCooke HTTP 1.1
+        ```
+        Use `DELETE /cookies` endpoint if you can use `DELETE` request.
+      queryParameters:
+        type: CookieList
+      responses:
+        200:
+          headers:
+            Set-Cookie:
+              description: A `set-cookie` header  with passed to the server list of cookies.
+          body:
+            type: BaseResponse
+/compression:
+  description: |
+    An endpoint to test various compression types.
+  /gzip:
+    get:
+      is: [RequestResponse]
+      headers:
+        x-api-key?: string
+      description: |
+        Generates a response that is GZipped. It compresses every response,
+        no matter the size of it (by default servers compresses responses
+        above set size).
+  /deflate:
+    get:
+      is: [RequestResponse]
+      description: |
+        Generates a response that is deflatted. It compresses every response,
+        no matter the size of it (by default servers compresses responses
+        above set size).
+/status:
+  description: Tests status codes responses.
+  /{code}:
+    uriParameters:
+      code:
+        type: integer
+        minimum: 200
+        maximum: 599
+        description: |
+          Valid status code, which is >= 200 and <= 599.
+          Other status codes are accepted by the endpoint but in general they
+          are invalid.
+    get:
+      description: |
+        Returns a response for given status `code`.
+        The response doesn't carry any body.

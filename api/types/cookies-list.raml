@@ -1,0 +1,10 @@
+#%RAML 1.0 DataType
+
+description: |
+  A list of cookies. Keys are cookies `name`s and values are cookies
+  `value`s.
+type: object
+
+properties:
+  /^[a-zA-Z0-9\-_\.]+$/:
+    type: string
