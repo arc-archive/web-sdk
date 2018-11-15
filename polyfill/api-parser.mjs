@@ -27,11 +27,11 @@ export class WebSdkApiParser {
   parse() {
     return amf.Core.init()
     .then(() => this._parseFile())
-    // .then((doc) => {
-    //   // validation seems to be disabled in 3.0.0.
-    //   return this._validate(doc)
-    //   .then(() => doc);
-    // })
+    .then((doc) => {
+      return this._validate(doc)
+      .then(() => doc)
+      .catch(() => doc);
+    })
     .catch((cause) => {
       throw new Error(cause.toString());
     });
@@ -66,7 +66,7 @@ export class WebSdkApiParser {
 
   _validate(doc) {
     let validateProfile;
-    switch (this.apiInfo) {
+    switch (this.apiInfo.type) {
       case 'RAML 1.0': validateProfile = amf.ProfileNames.RAML; break;
       case 'RAML 0.8': validateProfile = amf.ProfileNames.RAML08; break;
       case 'OAS 1.0':
