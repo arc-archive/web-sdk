@@ -337,6 +337,10 @@ This document is work in progress. It will most probably change as well as WebSD
 
 ### Security
 
+**SSL only**
+
+This API should only work in secured context (over SSL). It includes both API model file and requests made to API endpoints.
+
 **CORS model for web APIs**
 
 Many APIs do not return CORS headers in the response to `OPTIONS` request. Therefore in standard model requests to such API is not possible. This proposal assumes sharing APIs with web developers on different domains.
