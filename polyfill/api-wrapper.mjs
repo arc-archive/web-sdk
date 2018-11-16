@@ -85,7 +85,13 @@ export class WebSdkApiWrapper {
     }
     let current = this.api;
     while (parts.length) {
-      const breadcrumb = parts.shift();
+      let breadcrumb = parts.shift();
+      if (breadcrumb[0] === '{') {
+        breadcrumb = breadcrumb.substr(1);
+      }
+      if (breadcrumb[breadcrumb.length - 1] === '}') {
+        breadcrumb = breadcrumb.substr(0, breadcrumb.length - 1);
+      }
       if (!(breadcrumb in current)) {
         current[breadcrumb] = {};
       }
