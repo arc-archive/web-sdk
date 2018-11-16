@@ -165,17 +165,37 @@ export class WebSdkApiWrapper {
     };
   }
 
+  _selectPayload(payloads, contentType) {
+    let payload;
+    if (!contentType) {
+      payload = payloads[0];
+    } else {
+      const lowerCt = contentType.toLowerCase();
+      payload = payloads.find((item) => item.mediaType.toString() === lowerCt);
+    }
+    return payload;
+  }
+
   _getRequestHeaders(method, init) {
     if (!init) {
       init = {};
     }
-    const apiHeaders = (method && method.request && method.request.headers);
-    if (!apiHeaders || !apiHeaders.length) {
-      return;
-    }
+    // Adds content type if required
     const initParams = init.headers || {};
     const initHeaders = new Headers(initParams);
+    const initCt = initHeaders.get('content-type');
+    const payloads = method.request && method.request.payloads;
     const result = new Headers();
+    if (payloads && payloads.length) {
+      const payload = this._selectPayload(payloads, initCt);
+      if (payload) {
+        result.set('content-type', payload.mediaType.toString());
+      }
+    }
+    const apiHeaders = (method && method.request && method.request.headers);
+    if (!apiHeaders || !apiHeaders.length) {
+      return result;
+    }
     for (let i = 0; i < apiHeaders.length; i++) {
       const apiHeader = apiHeaders[i];
       const name = apiHeader.name.toString();
