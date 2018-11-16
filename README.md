@@ -1,6 +1,6 @@
 # WebSDK polyfill and <web-sdk> web component
 
-This is a proof of concept for a proposition of new web platform API: WebSDK.
+This is a proof of concept of a proposition of new web platform API: WebSDK.
 
 This PoC contains:
 
@@ -11,9 +11,10 @@ This PoC contains:
 As long as this notice is here the polyfill and the component won't work.
 
 
-## What is WebSDK?
+## WebSDK primitive
 
-In short, it's a way to generate an SDK for REST API at runtime using any of standardized API specifications like RAML or OAS.
+It's a way to generate an SDK for REST API at runtime using any of standardized API specifications like RAML or OAS.
+The browser handles API model parsing process and generating JavaScript interface to interact with remote resource.
 
 ## Benefits of WebSDK
 
@@ -21,12 +22,13 @@ In short, it's a way to generate an SDK for REST API at runtime using any of sta
 
 #### Common REST API
 
-WebSDK generates common model for all rest APIs. Web developer has to learn how to use WebSDK API once and then, using API documentation, makes a call to an endpoint.
-Common model means that the parameters for the request are defined by WebSDK and are propagated in underlying HTTP request according to API specification.
+WebSDK generates common model for all rest APIs. A web developer has to learn how to use WebSDK API once and then, using API model documentation, can make a call to an endpoint.
+Common model means that the parameters for the request are defined by WebSDK and are propagated in underlying HTTP request according to API model.
 
 #### Standardized way of authentication
 
-Both OAS and RAML defines ways to authenticate users in a web service. Authentication methods are all standardised and therefore the authentication flow can be unified for all APIs. This means that the developer no longer have to spend time reading SDK documentation to authenticate the user but instead calls unified authentication interface of WebSDK.
+Both OAS and RAML defines ways to authenticate users in a web service. Standardised authorization methods are handled in unified way. This means that the developer no longer have to learn
+the SDK to authenticate the user. Non standard authentication methods can be implemented by API providers by providing an extension to the authentication API of WebSDK.
 
 #### Faster consumption of new APIs
 
@@ -177,7 +179,7 @@ For example
 
 <web-sdk api="my-api" id="api">
  <web-sdk-authentication client-id="..." redirect-url="..." id="auth"></web-sdk-authentication>
- <web-sdk-request endpoint="/users/me" method="GET" id="profile"></web-sdk-request>
+ <web-sdk-request endpoint="/users/me" method="GET" id="profile" auto></web-sdk-request>
 </web-sdk>
 
 <script>
@@ -201,8 +203,10 @@ For example
 ## `<web-sdk>` component
 
 It initializes the WebSDK API and creates a workspace for other components.
-Other components added to the light DOM of it are scoped to this API.
+Other components added to the light DOM are scoped to this API.
 It also communicates authorization state change to child elements.
+
+When removing this component from the DOM it removes generated SDK from JavaScript interface. Dynamically created elements initializes the API the same way as during the loading stage.
 
 ### API
 
@@ -256,6 +260,17 @@ Type: `function()`
 
 Removes any authentication configuration previously received. In case of OAuth 2.0 by calling `authenticate` function after logging out will authenticate the user without prompting for app authorization as the app is already authorized with the OAuth 2.0 provider.
 
+#### `auto` property
+
+Type: `boolean`
+
+Allows to perform authentication automatically when the component is initialized.
+
+To be discussed:
+
+-   OAuth2 would open authorization popup at page load. This is not a good experience for the end user.
+-   Methods that requires request parameters always prohibits auto authentication as it is missing the request context.
+
 #### `authenticated-changed` event
 
 The event is dispatched when authentication status changed.
@@ -264,6 +279,7 @@ The event is dispatched when authentication status changed.
 
 A component to make authenticated and declarative request to the endpoint.
 If the endpoint requires authentication it waits until authentication state change to `authenticated`. If authentication is not required then it performs the request when the element is created.
+Required properties are `endpoint` and `method`.
 
 ### API
 
@@ -281,16 +297,77 @@ Type: `string`
 
 HTTP method name to use with request
 
+#### `headers` property
+
+Type: `object`
+
+List of headers to be included into the request. Only headers declared in the API model are accepted. `content-type` header is required when the request is carrying the payload but it's only set if API model allows given value. This value is optional.
+
+#### `body` property
+
+Type: `blob|buffersource|formdata|urlsearchparams|string|readablestream`
+
+Body to be included into the request. `GET` and `HEAD` requests ignores this value. This value is optional.
+
+#### `auto` property
+
+Type: `boolean`
+
+Allows to make a request automatically as soon as `endpoint` and `method` properties are set.
+
 #### `send` property
 
 Type: `function()`
 
-Allows to manually generate and send request to the endpoint.
+Allows to manually generate and send request to the endpoint. Returns a `Promise` resolved to the `Request` object as defined in Fetch API.
 
 #### `response` event
 
-Dispatched when the response is ready
+Dispatched when the response is ready. The target of the event has `response` property which is a `Response` object as defined in Fetch API.
+
+#### `error` event
+
+Dispatched when the request failed. If applicable the target of the event has `response` property which is a `Response` object as defined in Fetch API. If the property is not set then the request was never constructed due to error (usually it means that one or more request parameters are invalid).
 
 ## Status of this document
 
 This document is work in progress. It will most probably change as well as WebSDK and `<web-sdk_*>` APIs. Any comments are welcome. Please, create issue report if you want start a discussion about the proposal.
+
+## To be discussed
+
+### Security
+
+**CORS model for web APIs**
+
+Many APIs do not return CORS headers in the response to `OPTIONS` request. Therefore in standard model requests to such API is not possible. This proposal assumes sharing APIs with web developers on different domains.
+
+Available options:
+-   If request to the API model file passes CORS restrictions then the whole API assumes the same access level
+-   If the API endpoints matches API model file origin and the file passes CORS restrictions then the requests are allowed by default
+-   API provider must provide CORS headers for both API model file and endpoints (current web model)
+-   (more?)
+
+**Custom authorization methods**
+
+Some API providers requires non-standard authentication methods. For example the provider could require a SHA-512 hash of a key generated on user basis. There's no way to implement any possible case in WebSDK API.
+
+Available options:
+-   Extension model for the authorization module of WebSDK. It allows API provider to publish a JavaScript module that implements a method to process arguments and generates a parameter (header, query parameter, body value) to be included to the request.
+-   (more?)
+
+### SDK logic
+
+**Variables in the path**
+
+This proposal assumes that path variables are passed as a property to request `init` object. However, because path variables are always required, it might be justified to declare variables as arguments to the request function all in order of occurrence.
+
+For example: `sdk.api.param.get({variables: {param: 'value'}, headers: {...}})` versus `sdk.api.param.get('value', {headers: {...}})`
+
+**Missing parameters resolving**
+
+API request may require one of authentication methods or request bodies defined in API model. For better web developer experience the API may do assumptions about the intension.
+
+Available options:
+-   If the API model defines only one option this option is always assumed when corresponding parameter is missing
+-   If the API model assumes more then one option and corresponding parameter is not provided it assumes first option defined in the API model
+-   No assumptions are made and the WebSDK API always throws error when a parameter is missing
