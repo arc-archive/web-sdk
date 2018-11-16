@@ -5,27 +5,155 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Web SDK proof of concept</title>
+  <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+  <style>
+  :root {
+    --shadow-elevation-4dp: 0 4px 5px 0 rgba(0, 0, 0, 0.14),
+                    0 1px 10px 0 rgba(0, 0, 0, 0.12),
+                    0 2px 4px -1px rgba(0, 0, 0, 0.4);
+  }
+
+  body {
+    font-family: 'Roboto', 'Noto', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background-color: #F5F5F5;
+  }
+
+  h1 {
+    font-size: 34px;
+    font-weight: 400;
+    letter-spacing: -.01em;
+    line-height: 40px;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 28px;
+  }
+
+  .demo-page {
+    box-shadow: var(--shadow-elevation-4dp);
+    max-width: 1100px;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 24px 40px;
+    padding: 20px;
+    background-color: #fff;
+  }
+
+  output {
+    display: block;
+    white-space: pre-wrap;
+    line-height: 1.5em;
+  }
+
+  code {
+    font-family: 'Roboto Mono', 'Consolas', 'Menlo', monospace;
+    background-color: #FFF3E0;
+    padding: 8px;
+    display: block;
+  }
+
+  pre {
+    background-color: inherit;
+    margin: 0;
+  }
+  </style>
   <script src="https://unpkg.com/@webcomponents/webcomponentsjs@^2.0.0/webcomponents-loader.js"></script>
   <link rel="api" type="RAML 1.0" href="api/api.raml" title="my-api">
   <script src="lib/amf.js"></script>
 </head>
 
 <body>
+  <section role="main" class="demo-page">
+    <h1>WebSDK API demo page</h1>
+    <output id="out"></output>
+  </section>
+
+  <section class="demo-page">
+    <h2>Code</h2>
+    <code>
+      <pre>
+&lt;link rel="api" type="RAML 1.0" href="api/api.raml" title="my-api"&gt;
+
+&lt;script&gt;
+navigator.sdk.ready()
+.then(() => navigator.sdk.api('my-api')
+.then((sdk) => {
+  return sdk.api.cookies.post({
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      cookie1: 'created'
+    })
+  })
+  .then(() => sdk);
+})
+.then((sdk) => sdk.api.compression.gzip.get())
+.then((response) => response.json())
+.then((data) => console.log(data));
+&lt;/script&gt;</pre>
+    </code>
+  </section>
+
   <link rel="api" type="RAML 1.0" href="non-existing.raml" title="no-api">
-  <!-- <link rel="api" type="Not supported" href="api.raml" title="no-support"> -->
   <script type="module" src="polyfill/polyfill.mjs"></script>
   <script type="module">
+  function log(message) {
+    const node = document.getElementById('out');
+    let text = node.innerText;
+    if (text) {
+      text += '\n';
+    }
+    text += message;
+    node.innerText = text;
+  }
+  log('Initializing WebSDK...');
+  let echoSdk;
   navigator.sdk.ready()
-  .then(() => navigator.sdk.api('my-api'))
+  .then(() => {
+    log('WebSDK ready.');
+    log('Initializing SDK for "my-api"...');
+    return navigator.sdk.api('my-api');
+  })
   .then((sdk) => {
-    // sdk.api.compression.gzip.get();
-    return sdk.api.cookies.set.get({
-      parameters: {
-        type: 'test'
-      }
+    echoSdk = sdk;
+    log('SDK ready.');
+    log('============');
+    log('Posting data to echo service...');
+    return sdk.api.cookies.post({
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        cookie1: 'created'
+      })
     });
+  })
+  .then((response) => {
+    log('POST response received with status: ' + response.status);
+    log('Reading response body...');
+    return response.json();
+  })
+  .then((data) => {
+    log('Body read.');
+    log(JSON.stringify(data, null, 2));
+    log('============');
+    log('Getting data from echo service...');
+    return echoSdk.api.compression.gzip.get();
+  })
+  .then((response) => {
+    log('GET response received with status: ' + response.status);
+    log('Reading the body...');
+    return response.json();
+  })
+  .then((data) => {
+    log('Body read.');
+    log(JSON.stringify(data, null, 2));
+    console.log(data);
   });
-  // .then((respone) => response.json());
   </script>
 </body>
 
