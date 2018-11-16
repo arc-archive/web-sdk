@@ -112,12 +112,86 @@ export class WebSdkApiWrapper {
   }
 
   _makeRequest(endpointId, methodId, init) {
+    const {url, method, headers, body} = this._collectRequestData(endpointId, methodId, init);
+    const request = this._createRequest(url, method, headers, body, init);
+    return fetch(request);
+  }
+
+  _createRequest(url, method, headers, body, userInit) {
+    const init = {
+      method
+    };
+    if (headers) {
+      init.headers = headers;
+    }
+    if (body) {
+      init.body = body;
+    }
+    const include = ['mode', 'credentials', 'cache', 'redirect', 'referrer', 'integrity'];
+    Object.keys(userInit).forEach((key) => {
+      if (include.indexOf(key) === -1) {
+        return;
+      }
+      init[key] = userInit[key];
+    });
+    return new Request(url, init);
+  }
+
+  _collectRequestData(endpointId, methodId, init) {
+    if (!init) {
+      init = {};
+    }
     const endpoint = this._findEndpoint(endpointId);
     const method = this._findEndpointsMethod(endpoint, methodId);
+    const url = this._getRequestUrl(endpoint, method, init);
+    const headers = this._getRequestHeaders(method, init);
+    const lowerMethod = method.method.toString();
+    const httpMethod = lowerMethod.toUpperCase();
+    let body;
+    if (['get', 'head'].indexOf(lowerMethod) === -1) {
+      body = init.body;
+    }
+    return {
+      url,
+      method: httpMethod,
+      headers,
+      body
+    };
+  }
+
+  _getRequestHeaders(method, init) {
+    if (!init) {
+      init = {};
+    }
+    const apiHeaders = (method && method.request && method.request.headers);
+    if (!apiHeaders || !apiHeaders.length) {
+      return;
+    }
+    const initParams = init.headers || {};
+    const initHeaders = new Headers(initParams);
+    const result = new Headers();
+    for (let i = 0; i < apiHeaders.length; i++) {
+      const apiHeader = apiHeaders[i];
+      const name = apiHeader.name.toString();
+      if (initHeaders.has(name)) {
+        result.append(name, initHeaders.get(name));
+        continue;
+      }
+      if (!apiHeader.required.value()) {
+        continue;
+      }
+      let value = this._extractVariableValue(apiHeader, initParams);
+      if (value) {
+        result.append(name, value);
+      }
+    }
+    return result;
+  }
+
+  _getRequestUrl(endpoint, method, init) {
     const path = this._processEndpointPath(endpoint, init);
     const url = this._constructRequestUrl(method, path, init);
-    console.log('URL', url);
-    return Promise.reject(new Error('Not implemented: ' + endpointId + '::' + methodId));
+    return url;
   }
 
   _findEndpoint(id) {

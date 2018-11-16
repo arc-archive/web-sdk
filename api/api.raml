@@ -7,7 +7,7 @@ mediaType: [application/json]
 baseUriParameters:
   env:
     type: string
-    default: env
+    default: echo
     examples:
       Default: env
       Demo: demo
@@ -108,6 +108,10 @@ types:
         Use `POST /cookies` endpoint if you can use `POST` request.
       queryParameters:
         type: CookieList
+      headers:
+        x-test:
+          type: string
+          default: test
       responses:
         200:
           headers:

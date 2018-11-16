@@ -77,7 +77,10 @@ export class WebSdkApiParser {
     }
     return amf.AMF.validate(doc, validateProfile)
     .then((result) => {
-      console.log(result.toString());
+      if (!result.conforms) {
+        console.warn('API validation error');
+        console.warn(result.toString());
+      }
     });
   }
 }
