@@ -112,12 +112,13 @@ export class WebSdkApiWrapper {
 
   _wrapMethod(target, method, id) {
     const name = method.method.toString();
-    target[name] = (init) => {
-      this._makeRequest(id, method.id, init);
-    };
+    target[name] = this._makeRequest.bind(this, id, method.id);
   }
 
   _makeRequest(endpointId, methodId, init) {
+    if (!init) {
+      init = {};
+    }
     const {url, method, headers, body} = this._collectRequestData(endpointId, methodId, init);
     const request = this._createRequest(url, method, headers, body, init);
     return fetch(request);
