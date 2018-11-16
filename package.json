@@ -5,7 +5,8 @@
   "main": "web-sdk.js",
   "scripts": {
     "test": "exit 0",
-    "prepare": "node prepare-amf.js"
+    "prepare": "node prepare-amf.js",
+    "start": "polymer serve --npm --module-resolution \"none\" --compile \"never\""
   },
   "author": "Pawel Psztyc",
   "license": "Apache-2.0",
