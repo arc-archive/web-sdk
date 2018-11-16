@@ -1,3 +1,4 @@
+import {WebSdkRequest} from './api-request.mjs';
 /**
  * Generates a JavaScript interface to interact with the API.
  * It generates path for each endpoint and method so functions can be
@@ -43,11 +44,25 @@
  * call the function like:
  *
  * ```
- * sdk.path.to.endpoint.get({
+ * sdk.api.path.to.endpoint.get({
  *  variables: {
  *    endpoint: 'value'
  *  }
  * });
+ * ```
+ *
+ * To access authentication methods:
+ *
+ * ```
+ * sdk.auth.isAuthorized(config);
+ * ```
+ *
+ * To access validation interface:
+ *
+ * ```
+ * const validationResult = sdk.validation.todos.post(init);
+ * console.log(validationResult.invalid);
+ * console.log(validationResult.messages);
  * ```
  */
 export class WebSdkApiWrapper {
@@ -55,9 +70,13 @@ export class WebSdkApiWrapper {
     this.__amf = amf;
     this.api = {};
     this.auth = {};
+    this.validation = {};
     this._wrap(amf);
   }
-
+  /**
+   * Generates JavaScript interface for the API.
+   * @param {Object} amf Generated AMF model from the API spec file.
+   */
   _wrap(amf) {
     this._wrapEndpoints(amf.encodes && amf.encodes.endPoints);
   }
@@ -75,7 +94,7 @@ export class WebSdkApiWrapper {
   _wrapEndpoint(endpoint) {
     const path = endpoint.path.toString();
     const sdk = this._constructPath(path);
-    this._wrapMethods(sdk, endpoint.operations, endpoint.id);
+    this._wrapMethods(sdk.api, sdk.validation, endpoint.operations, endpoint.id);
   }
 
   _constructPath(path) {
@@ -83,7 +102,8 @@ export class WebSdkApiWrapper {
     if (!parts[0]) {
       parts.shift();
     }
-    let current = this.api;
+    let currentApi = this.api;
+    let currentValidatrion = this.validation;
     while (parts.length) {
       let breadcrumb = parts.shift();
       if (breadcrumb[0] === '{') {
@@ -92,266 +112,50 @@ export class WebSdkApiWrapper {
       if (breadcrumb[breadcrumb.length - 1] === '}') {
         breadcrumb = breadcrumb.substr(0, breadcrumb.length - 1);
       }
-      if (!(breadcrumb in current)) {
-        current[breadcrumb] = {};
+      if (!(breadcrumb in currentApi)) {
+        currentApi[breadcrumb] = {};
+        currentValidatrion[breadcrumb] = {};
       }
-      current = current[breadcrumb];
+      currentApi = currentApi[breadcrumb];
+      currentValidatrion = currentValidatrion[breadcrumb];
     }
-    return current;
+    return {
+      api: currentApi,
+      validation: currentValidatrion
+    };
   }
 
-  _wrapMethods(target, operations, id) {
+  _wrapMethods(apiTarget, validationTarget, operations, id) {
     if (!operations || !operations.length) {
       return;
     }
     for (let i = 0, len = operations.length; i < len; i++) {
       const op = operations[i];
-      this._wrapMethod(target, op, id);
+      this._wrapMethodApi(apiTarget, op, id);
+      this._wrapMethodValidation(validationTarget, op, id);
     }
   }
 
-  _wrapMethod(target, method, id) {
+  _wrapMethodApi(target, method, id) {
     const name = method.method.toString();
     target[name] = this._makeRequest.bind(this, id, method.id);
   }
 
+  _wrapMethodValidation(target, method, id) {
+    const name = method.method.toString();
+    target[name] = this._makeValidation.bind(this, id, method.id);
+  }
+
   _makeRequest(endpointId, methodId, init) {
+    const request = new WebSdkRequest(this.__amf, endpointId, methodId);
+    return request.execute(init);
+  }
+
+  _makeValidation(endpointId, methodId, init) {
     if (!init) {
       init = {};
     }
-    const {url, method, headers, body} = this._collectRequestData(endpointId, methodId, init);
-    const request = this._createRequest(url, method, headers, body, init);
-    return fetch(request);
-  }
-
-  _createRequest(url, method, headers, body, userInit) {
-    const init = {
-      method
-    };
-    if (headers) {
-      init.headers = headers;
-    }
-    if (body) {
-      init.body = body;
-    }
-    const include = ['mode', 'credentials', 'cache', 'redirect', 'referrer', 'integrity'];
-    Object.keys(userInit).forEach((key) => {
-      if (include.indexOf(key) === -1) {
-        return;
-      }
-      init[key] = userInit[key];
-    });
-    return new Request(url, init);
-  }
-
-  _collectRequestData(endpointId, methodId, init) {
-    if (!init) {
-      init = {};
-    }
-    const endpoint = this._findEndpoint(endpointId);
-    const method = this._findEndpointsMethod(endpoint, methodId);
-    const url = this._getRequestUrl(endpoint, method, init);
-    const headers = this._getRequestHeaders(method, init);
-    const lowerMethod = method.method.toString();
-    const httpMethod = lowerMethod.toUpperCase();
-    let body;
-    if (['get', 'head'].indexOf(lowerMethod) === -1) {
-      body = init.body;
-    }
-    return {
-      url,
-      method: httpMethod,
-      headers,
-      body
-    };
-  }
-
-  _selectPayload(payloads, contentType) {
-    let payload;
-    if (!contentType) {
-      payload = payloads[0];
-    } else {
-      const lowerCt = contentType.toLowerCase();
-      payload = payloads.find((item) => item.mediaType.toString() === lowerCt);
-    }
-    return payload;
-  }
-
-  _getRequestHeaders(method, init) {
-    if (!init) {
-      init = {};
-    }
-    // Adds content type if required
-    const initParams = init.headers || {};
-    const initHeaders = new Headers(initParams);
-    const initCt = initHeaders.get('content-type');
-    const payloads = method.request && method.request.payloads;
-    const result = new Headers();
-    if (payloads && payloads.length) {
-      const payload = this._selectPayload(payloads, initCt);
-      if (payload) {
-        result.set('content-type', payload.mediaType.toString());
-      }
-    }
-    const apiHeaders = (method && method.request && method.request.headers);
-    if (!apiHeaders || !apiHeaders.length) {
-      return result;
-    }
-    for (let i = 0; i < apiHeaders.length; i++) {
-      const apiHeader = apiHeaders[i];
-      const name = apiHeader.name.toString();
-      if (initHeaders.has(name)) {
-        result.append(name, initHeaders.get(name));
-        continue;
-      }
-      if (!apiHeader.required.value()) {
-        continue;
-      }
-      let value = this._extractVariableValue(apiHeader, initParams);
-      if (value) {
-        result.append(name, value);
-      }
-    }
-    return result;
-  }
-
-  _getRequestUrl(endpoint, method, init) {
-    const path = this._processEndpointPath(endpoint, init);
-    const url = this._constructRequestUrl(method, path, init);
-    return url;
-  }
-
-  _findEndpoint(id) {
-    const amf = this.__amf;
-    const list = amf.encodes.endPoints;
-    return list.find((item) => item.id === id);
-  }
-
-  _findEndpointsMethod(endpoint, id) {
-    return endpoint.operations.find((item) => item.id === id);
-  }
-
-  _processEndpointPath(endpoint, init) {
-    if (!init) {
-      init = {};
-    }
-    let path = endpoint.path.toString();
-    if (!path) {
-      return;
-    }
-    const params = endpoint.parameters;
-    if (!params || !params.length) {
-      return path;
-    }
-    for (let i = 0, len = params.length; i < len; i++) {
-      const v = params[i];
-      const value = this._extractVariableValue(v, init.variables);
-      if (!value) {
-        continue;
-      }
-      const name = v.name.toString();
-      path = path.replace(`\{${name}\}`, value);
-    }
-    return path;
-  }
-
-  _constructRequestUrl(method, path, init) {
-    path = path || '/';
-    const base = this._getBaseUri(init);
-    let u;
-    if (!base) {
-      u = new URL(path, location.href);
-      u.search = '';
-      u.hash = '';
-    } else {
-      u = new URL(path, base);
-    }
-    const request = method.request;
-    if (request) {
-      this._applyQueryParameters(u, request.queryParameters, init);
-    }
-    return u.toString();
-  }
-
-  _applyQueryParameters(parser, qp, init) {
-    if (!qp || !qp.length) {
-      return;
-    }
-    if (!init) {
-      init = {};
-    }
-    const initParams = init.parameters || {};
-    for (let i = 0, len = qp.length; i < len; i++) {
-      const param = qp[i];
-      const name = param.name.toString();
-      if (name in initParams) {
-        parser.searchParams.set(name, initParams[name]);
-        continue;
-      }
-      if (!param.required.value()) {
-        continue;
-      }
-      let value = this._extractVariableValue(param, initParams);
-      if (value) {
-        parser.searchParams.set(name, value);
-      }
-    }
-  }
-
-  _getBaseUri(init) {
-    if (!init) {
-      init = {};
-    }
-
-    const amf = this.__amf;
-    const srvs = amf.encodes.servers;
-    if (!srvs || !srvs.length) {
-      return;
-    }
-    const srv = srvs[0];
-    let base = srv.url.toString();
-    const vars = srv.variables;
-    if (!vars || !vars.length) {
-      return base;
-    }
-    for (let i = 0, len = vars.length; i < len; i++) {
-      const v = vars[i];
-      const value = this._extractVariableValue(v, init.variables);
-      if (!value) {
-        continue;
-      }
-      const name = v.name.toString();
-      base = base.replace(`\{${name}\}`, value);
-    }
-    return base;
-  }
-
-  _extractVariableValue(shape, variables) {
-    const name = shape.name.toString();
-    if (variables && name in variables) {
-      return variables[name];
-    }
-    const schema = shape.schema;
-    let value = this._getDefaultValue(schema);
-    if (value) {
-      return value;
-    }
-    value = this._getExampleValue(schema);
-    return value;
-  }
-
-  _getDefaultValue(schema) {
-    if (!schema || !schema.defaultValue) {
-      return;
-    }
-    return schema.defaultValue.value;
-  }
-
-  _getExampleValue(schema) {
-    if (!schema || !schema.examples || !schema.examples.length) {
-      return;
-    }
-    const ex = schema.examples[0];
-    return ex.value.toString();
+    // Mocked for now
+    return true;
   }
 }
