@@ -24,7 +24,7 @@ export class WebSdkRequest {
     this.endpointId = endpointId;
     this.methodId = methodId;
     this.endpoint = this._findEndpoint(endpointId);
-    this.method = this._findEndpointsMethod(methodId);
+    this.method = this._findMethod(methodId);
   }
   /**
    * Executes the request using the `Fetch` API.
@@ -40,24 +40,44 @@ export class WebSdkRequest {
     return fetch(request);
   }
 
+  _findEndpoint(id) {
+    const amf = this.amf;
+    const list = amf && amf.encodes && amf.encodes.endPoints;
+    if (!list) {
+      return;
+    }
+    return list.find((item) => item.id === id);
+  }
+
+  _findMethod(id) {
+    const ops = this.endpoint && this.endpoint.operations;
+    if (!(ops instanceof Array)) {
+      return;
+    }
+    return ops.find((item) => item.id === id);
+  }
+
   _createRequest(url, method, headers, body, userInit) {
     const init = {
-      method
+      method,
+      headers,
+      body
     };
-    if (headers) {
-      init.headers = headers;
-    }
-    if (body) {
-      init.body = body;
+    this._collectFetchRequestArguments(userInit, init);
+    return new Request(url, init);
+  }
+
+  _collectFetchRequestArguments(init, target) {
+    if (!init) {
+      return;
     }
     const include = ['mode', 'credentials', 'cache', 'redirect', 'referrer', 'integrity'];
-    Object.keys(userInit).forEach((key) => {
+    Object.keys(init).forEach((key) => {
       if (include.indexOf(key) === -1) {
         return;
       }
-      init[key] = userInit[key];
+      target[key] = init[key];
     });
-    return new Request(url, init);
   }
 
   _collectRequestData(init) {
@@ -133,22 +153,6 @@ export class WebSdkRequest {
     const path = this._processEndpointPath(init);
     const url = this._constructRequestUrl(path, init);
     return url;
-  }
-
-  _findEndpoint(id) {
-    const amf = this.amf;
-    const list = amf.encodes && amf.encodes.endPoints;
-    if (!list) {
-      return;
-    }
-    return list.find((item) => item.id === id);
-  }
-
-  _findEndpointsMethod(id) {
-    if (!this.endpoint.operations) {
-      return;
-    }
-    return this.endpoint.operations.find((item) => item.id === id);
   }
 
   _processEndpointPath(init) {
