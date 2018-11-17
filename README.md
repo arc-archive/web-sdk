@@ -1,15 +1,18 @@
+> ## 🛠 Status: In Development
+> WebSDK proposal is currently in development. The polyfill and the components probably are not working just yet. Also the proposal is under internal discussion (MuleSoft) before it's going to be promoted externally. However, if you are interested in participating in the discussion, please, create an issue report or drop us an email arc@mulesoft.com
+
+
 # WebSDK polyfill and <web-sdk> web component
 
 This is a proof of concept of a proposition of new web platform API: WebSDK.
 
-This PoC contains:
+This project contains:
 
 -   WebSDK polyfill as a platform primitive
--   `<web-sdk>` web component as a part of [Layered API](https://github.com/drufball/layered-apis)
-
-**This is work in progress**
-As long as this notice is here the polyfill and the component won't work.
-
+-   `<web-sdk-*>` web components as a part of [Layered API](https://github.com/drufball/layered-apis)
+    -   `<web-sdk>`
+    -   `<web-sdk-authentication>`
+    -   `<web-sdk-request>`
 
 ## WebSDK primitive
 
@@ -328,10 +331,6 @@ Dispatched when the response is ready. The target of the event has `response` pr
 #### `error` event
 
 Dispatched when the request failed. If applicable the target of the event has `response` property which is a `Response` object as defined in Fetch API. If the property is not set then the request was never constructed due to error (usually it means that one or more request parameters are invalid).
-
-## Status of this document
-
-This document is work in progress. It will most probably change as well as WebSDK and `<web-sdk_*>` APIs. Any comments are welcome. Please, create issue report if you want start a discussion about the proposal.
 
 ## To be discussed
 
