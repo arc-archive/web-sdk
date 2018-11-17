@@ -155,7 +155,7 @@ export class WebSdkApiWrapper {
     if (!init) {
       init = {};
     }
-    // Mocked for now
+    // Mocked for now. Not sure if there's a use case for this.
     return true;
   }
 }
