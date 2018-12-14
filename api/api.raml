@@ -37,7 +37,25 @@ types:
   RequestDataResponse: !include types/request-data-response.raml
   CookieListResponse: [BaseResponse, CookieList]
 
+securitySchemes:
+  oauth2:
+    type: OAuth 2.0
+    describedBy:
+      headers:
+        Authorization: string
+      responses:
+        401:
+          description: Authentication failed
+    settings:
+      accessTokenUri: https://auth.domain.com/token
+      authorizationUri: https://auth.domain.com/auth
+      authorizationGrants: [authorization_code, implicit]
+      scopes: [profile, email]
+  basic:
+    type: Basic Authentication
+securedBy: [basic]
 /cookies:
+  securedBy: [oauth2]
   description: |
     An endpoint that simulates cookies behaviors.
     It can create, list or delete cookies by sending appropriate `set-cookie`

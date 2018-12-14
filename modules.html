@@ -16,7 +16,7 @@
 
 <body>
   <web-sdk api="my-api" id="api">
-    <web-sdk-authentication client-id="..." redirect-url="..." id="auth"></web-sdk-authentication>
+    <web-sdk-authentication type="oauth2" client-id="testid" redirect-uri="https://auth.domain.com" id="auth"></web-sdk-authentication>
     <web-sdk-request endpoint="/users/me" method="GET" id="profile"></web-sdk-request>
     <p>test</p>
   </web-sdk>

@@ -1,6 +1,9 @@
+const authNodeName = 'WEB-SDK-AUTHENTICATION';
+
 class WebSdkElement extends HTMLElement {
   constructor() {
     super();
+    this._authenticationChanged = this._authenticationChanged.bind(this);
     this.__data__ = {};
     this.__createDom();
     this.__observeSlot();
@@ -22,7 +25,7 @@ class WebSdkElement extends HTMLElement {
   }
 
   static get observedAttributes() {
-    return ['api'];
+    return ['api', 'auth'];
   }
 
   get api() {
@@ -46,6 +49,29 @@ class WebSdkElement extends HTMLElement {
     this._propagateSdkAll(value);
   }
 
+  get auth() {
+    return this.__data__.auth;
+  }
+
+  set auth(value) {
+    this.__data__.auth = value;
+    this._setupAuth();
+  }
+
+  set authenticated(value) {
+    if (value && !this.hasAttribute('authenticated')) {
+      this.setAttribute('authenticated', '');
+    } else if (!value && this.hasAttribute('authenticated')) {
+      this.removeAttribute('authenticated');
+    }
+    this.__data__.authenticated = value;
+    this._propagateAuthenticated(value);
+  }
+
+  get authenticated() {
+    return this.__data__.authenticated;
+  }
+
   get ready() {
     if (!this.__data__.readyPromise) {
       this.__data__.readyPromise = new Promise((resolve, reject) => {
@@ -54,6 +80,11 @@ class WebSdkElement extends HTMLElement {
       });
     }
     return this.__data__.readyPromise;
+  }
+
+  _getChildren() {
+    const slot = this.shadowRoot.querySelector('#slot');
+    return slot.assignedNodes();
   }
 
   attributeChangedCallback(attrName, oldVal, newVal) {
@@ -96,6 +127,9 @@ class WebSdkElement extends HTMLElement {
         continue;
       }
       this._propagateSdk(node, this.sdk);
+      if (node.nodeName.indexOf(authNodeName) !== -1) {
+        this._setAuthComponent(node);
+      }
     }
   }
 
@@ -106,12 +140,14 @@ class WebSdkElement extends HTMLElement {
         continue;
       }
       this._propagateSdk(node, undefined);
+      if (node.nodeName.indexOf(authNodeName) !== -1) {
+        this._removeAuthComponent(node);
+      }
     }
   }
 
   _propagateSdkAll(sdk) {
-    const slot = this.shadowRoot.querySelector('#slot');
-    const nodes = slot.assignedNodes();
+    const nodes = this._getChildren();
     for (let i = 0, len = nodes.length; i < len; i++) {
       const node = nodes[i];
       if (!this._isWebSdkElement(node)) {
@@ -127,6 +163,52 @@ class WebSdkElement extends HTMLElement {
 
   _isWebSdkElement(node) {
     return !!(node && node.nodeName.indexOf('WEB-SDK-') === 0);
+  }
+
+  _setupAuth() {
+    if (!this.authComponent || !this.auth) {
+      return;
+    }
+  }
+
+  _setAuthComponent(node) {
+    this.authComponent = node;
+    this.authenticated = node.authenticated;
+    node.addEventListener('authentication-changed', this._authenticationChanged);
+  }
+
+  _removeAuthComponent(node) {
+    if (this.authComponent !== node) {
+      return;
+    }
+    node.removeEventListener('authentication-changed', this._authenticationChanged);
+    this.authComponent = undefined;
+    this._lookupAuthComponent();
+  }
+
+  _lookupAuthComponent() {
+    const nodes = this._getChildren();
+    for (let i = 0, len = nodes.length; i < len; i++) {
+      if (nodes[i].nodeName === authNodeName) {
+        this._setAuthComponent(nodes[i]);
+        break;
+      }
+    }
+  }
+
+  _authenticationChanged(e) {
+    this.authenticated = e.target.authenticated;
+  }
+
+  _propagateAuthenticated(value) {
+    const nodes = this._getChildren();
+    for (let i = 0, len = nodes.length; i < len; i++) {
+      const node = nodes[i];
+      if (!this._isWebSdkElement(node) || node.nodeName.indexOf(authNodeName) !== -1) {
+        continue;
+      }
+      node.authenticated = value;
+    }
   }
 }
 window.customElements.define('web-sdk', WebSdkElement);

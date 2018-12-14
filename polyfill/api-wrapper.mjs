@@ -1,4 +1,5 @@
 import {WebSdkRequest} from './api-request.mjs';
+import {WebSdkAuthentication} from './api-authentication.mjs';
 /**
  * Generates a JavaScript interface to interact with the API.
  * It generates path for each endpoint and method so functions can be
@@ -69,8 +70,8 @@ export class WebSdkApiWrapper {
   constructor(amf) {
     this.__amf = amf;
     this.api = {};
-    this.auth = {};
     this.validation = {};
+    this.auth = new WebSdkAuthentication(amf);
     this._wrap(amf);
   }
   /**
