@@ -1,6 +1,51 @@
+let amf;
+let credentials = {};
+
 export class WebSdkAuthentication {
-  onstructor(amf) {
-    this.__amf = amf;
+  constructor(amfApi) {
+    amf = amfApi;
+  }
+
+  setCredentials(config) {
+    if (!config) {
+      throw new Error('Authorization configuration not set');
+    }
+    if (!config.type) {
+      throw new Error('Authorization type not set');
+    }
+
+    switch (config.type) {
+      case 'Basic': this._setBasicCredentials(config); break;
+      default:
+        throw new Error(`Unknown auhorization type ${config.type}`);
+    }
+  }
+
+  _setBasicCredentials(config) {
+    credentials.Basic = {
+      username: config.username,
+      password: config.password,
+      hash: btoa(`${config.username}:${config.password}`)
+    };
+  }
+
+  getCredentials(type) {
+    if (!type) {
+      throw new Error('Authorization type not set');
+    }
+
+    switch (type) {
+      case 'Basic': this._getBasicCredentials(); break;
+      default:
+        throw new Error(`Unknown auhorization type ${type}`);
+    }
+  }
+
+  _getBasicCredentials() {
+    if (!credentials.Basic) {
+      return;
+    }
+    return credentials.Basic;
   }
 
   isAuthenticated() {
@@ -9,7 +54,7 @@ export class WebSdkAuthentication {
 
   listSecurity(shape) {
     let result = [];
-    const rootSecurity = this.__amf.encodes.security;
+    const rootSecurity = amf.encodes.security;
     if (rootSecurity && rootSecurity.length) {
       result = result.concat(rootSecurity);
     }
@@ -20,7 +65,7 @@ export class WebSdkAuthentication {
   }
 
   hasSecurity(shape) {
-    const rootSecurity = this.__amf.encodes.security;
+    const rootSecurity = amf.encodes.security;
     if (rootSecurity && rootSecurity.length) {
       return true;
     }

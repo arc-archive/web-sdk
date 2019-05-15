@@ -29,12 +29,24 @@ export class WebSdkRequest {
   /**
    * Executes the request using the `Fetch` API.
    * @param {?Object} init User parameters. See init object docs.
+   * @param {?Object} auth Authorization options.
    * @return {Promise<Response>} A promise resolved to a Response object.
    */
-  execute(init) {
+  execute(init, auth) {
     if (!init) {
       init = {};
     }
+    let authMethods = auth.listSecurity(this.method);
+    let endpointAuth = auth.listSecurity(this.endpoint);
+    if (endpointAuth.length > 0) {
+      authMethods = authMethods.concat(endpointAuth);
+    }
+    // TODO: Check if authentication is required.
+    // When required: check if user is authenticated for any authorization method
+    // if `auth` object is not set, and for selected method when `auth` property is set
+    // When the user is not authenticated and request authentication method is
+    // OAuth2 then begin OAuth2 flow.
+    // TODO: Test for "null" (RAML) auth method
     const {url, method, headers, body} = this._collectRequestData(init);
     const request = this._createRequest(url, method, headers, body, init);
     return fetch(request);
@@ -188,7 +200,16 @@ export class WebSdkRequest {
       u.search = '';
       u.hash = '';
     } else {
-      u = new URL(path, base);
+      u = new URL(base);
+      let basePath = u.pathname;
+      if (!basePath) {
+        basePath = '';
+      }
+      if (basePath[basePath.length - 1] === '/' && path[0] === '/') {
+        path = path.substr(1);
+      }
+      basePath += path;
+      u.pathname = basePath;
     }
     const request = this.method.request;
     if (request) {
@@ -226,9 +247,9 @@ export class WebSdkRequest {
     if (!init) {
       init = {};
     }
-
     const amf = this.amf;
     const srvs = amf.encodes.servers;
+    const version = amf.encodes.version && amf.encodes.version.toString();
     if (!srvs || !srvs.length) {
       return;
     }
@@ -240,7 +261,7 @@ export class WebSdkRequest {
     }
     for (let i = 0, len = vars.length; i < len; i++) {
       const v = vars[i];
-      const value = this._extractVariableValue(v, init.variables);
+      const value = this._extractVariableValue(v, init.variables, version);
       if (!value) {
         continue;
       }
@@ -250,8 +271,11 @@ export class WebSdkRequest {
     return base;
   }
 
-  _extractVariableValue(shape, variables) {
+  _extractVariableValue(shape, variables, version) {
     const name = shape.name.toString();
+    if (name === 'version' && version) {
+      return version;
+    }
     if (variables && name in variables) {
       return variables[name];
     }

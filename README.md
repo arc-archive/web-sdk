@@ -374,3 +374,35 @@ Available options:
 -   If the API model defines only one option this option is always assumed when corresponding parameter is missing
 -   If the API model assumes more then one option and corresponding parameter is not provided it assumes first option defined in the API model
 -   No assumptions are made and the WebSDK API always throws error when a parameter is missing
+
+## Running the demo
+
+Clone or fork and clone this repository.
+
+```sh
+$ git@github.com:advanced-rest-client/web-sdk.git
+```
+
+Enter the directory
+
+```sh
+$ cd web-sdk
+```
+
+Install NPM dependencies
+
+```sh
+$ npm i
+```
+
+Run API server
+
+```sh
+$ npm run start-api
+```
+
+Run www server using [polymer-cli](https://www.npmjs.com/package/polymer-cli).
+
+```sh
+$ npm start
+```

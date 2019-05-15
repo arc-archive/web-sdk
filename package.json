@@ -6,15 +6,22 @@
   "scripts": {
     "test": "exit 0",
     "prepare": "node prepare-amf.js",
-    "start": "polymer serve --npm --module-resolution \"none\" --compile \"never\""
+    "start": "polymer serve --npm --module-resolution \"none\" --compile \"never\"",
+    "start-api": "node --inspect=9227 server/api.js"
   },
   "author": "Pawel Psztyc",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@webcomponents/webcomponentsjs": "^2.1.3",
-    "amf-client-js": "^3.0.0",
+    "@webcomponents/webcomponentsjs": "^2.2.10",
+    "amf-client-js": "^3.2.0",
+    "body-parser": "^1.19.0",
     "browserify": "16.2.3",
-    "fs-extra": "^7.0.1"
+    "cors": "^2.8.5",
+    "express": "^4.16.4",
+    "fs-extra": "^7.0.1",
+    "passport": "^0.4.0",
+    "passport-http": "^0.3.0",
+    "uuid": "^3.3.2"
   },
   "repository": {
     "type": "git",

@@ -111,6 +111,7 @@ navigator.sdk.ready()
   }
   log('Initializing WebSDK...');
   let echoSdk;
+  // Initialization
   navigator.sdk.ready()
   .then(() => {
     log('WebSDK ready.');
@@ -121,13 +122,38 @@ navigator.sdk.ready()
     echoSdk = sdk;
     log('SDK ready.');
     log('============');
-    log('Posting data to echo service...');
-    return sdk.api.cookies.post({
+  })
+
+  .then(() => {
+    // Calling GET endpoint on `/` route
+    log('Getting data from "/" route...');
+    return echoSdk.api.get({
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+  })
+  .then((response) => {
+    log('GET response received with status: ' + response.status);
+    log('Reading response body...');
+    return response.json();
+  })
+  .then((data) => {
+    log('Body read.');
+    log(JSON.stringify(data, null, 2));
+    log('============');
+  })
+
+
+  .then(() => {
+    // Calling POST endpoint on `/` route
+    log('Posting data to "/" route...');
+    return echoSdk.api.post({
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        cookie1: 'created'
+        'demo-property': 'demo-value'
       })
     });
   })
@@ -140,8 +166,19 @@ navigator.sdk.ready()
     log('Body read.');
     log(JSON.stringify(data, null, 2));
     log('============');
-    log('Getting data from echo service...');
-    return echoSdk.api.compression.gzip.get();
+  })
+
+  .then((data) => {
+    log('Setting Basic authorization credentials.');
+    const auth = {
+      type: 'Basic',
+      username: 'demo-user',
+      password: 'demo-password'
+    };
+    echoSdk.auth.setCredentials(auth);
+    log('============');
+    log('Getting authorized response (Basic).');
+    return echoSdk.api.auth.basic.get();
   })
   .then((response) => {
     log('GET response received with status: ' + response.status);

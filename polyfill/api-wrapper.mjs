@@ -113,12 +113,15 @@ export class WebSdkApiWrapper {
       if (breadcrumb[breadcrumb.length - 1] === '}') {
         breadcrumb = breadcrumb.substr(0, breadcrumb.length - 1);
       }
-      if (!(breadcrumb in currentApi)) {
-        currentApi[breadcrumb] = {};
-        currentValidatrion[breadcrumb] = {};
+      // The case for methods for `/` endpoint
+      if (breadcrumb) {
+        if (!(breadcrumb in currentApi)) {
+          currentApi[breadcrumb] = {};
+          currentValidatrion[breadcrumb] = {};
+        }
+        currentApi = currentApi[breadcrumb];
+        currentValidatrion = currentValidatrion[breadcrumb];
       }
-      currentApi = currentApi[breadcrumb];
-      currentValidatrion = currentValidatrion[breadcrumb];
     }
     return {
       api: currentApi,
@@ -149,7 +152,7 @@ export class WebSdkApiWrapper {
 
   _makeRequest(endpointId, methodId, init) {
     const request = new WebSdkRequest(this.__amf, endpointId, methodId);
-    return request.execute(init);
+    return request.execute(init, this.auth);
   }
 
   _makeValidation(endpointId, methodId, init) {
