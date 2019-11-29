@@ -30,9 +30,10 @@
     font-size: 20px;
     font-weight: 500;
     line-height: 28px;
+    flex: 1;
   }
 
-  .demo-page {
+  .card {
     box-shadow: var(--shadow-elevation-4dp);
     max-width: 1100px;
     width: 100%;
@@ -59,15 +60,44 @@
     background-color: inherit;
     margin: 0;
   }
+
+  .vertical {
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+  }
+
+  .vertical.center {
+    align-items: center;
+  }
   </style>
   <link rel="api" type="RAML 1.0" href="api/api.raml" title="my-api">
+  <link rel="api" type="RAML 1.0" href="non-existing.raml" title="no-api">
   <script src="lib/amf.js"></script>
 </head>
 
 <body>
-  <section role="main" class="demo-page">
+  <section role="main">
     <h1>WebSDK API demo page</h1>
-    <output id="out"></output>
+    <div class="vertical">
+      <section class="card">
+        <div class="vertical center">
+          <h2>Execution log</h2>
+          <button id="clear">Clear</button>
+        </div>
+        <output id="out"></output>
+      </section>
+      <section class="card" id="oplist">
+        <h2>Operation</h2>
+        <h3>Listing resources</h3>
+        <button disabled class="api-action-button" data-action="getMain">GET main</button>
+        <button disabled class="api-action-button" data-action="createMain">POST main</button>
+        <button disabled class="api-action-button" data-action="getPeople">List people</button>
+        <button disabled class="api-action-button" data-action="getPerson">GET person</button>
+        <h3>Authorization</h3>
+        <button disabled class="api-action-button" data-action="basicAuthorization">Basic authorization</button>
+      </section>
+    </div>
   </section>
 
   <section class="demo-page">
@@ -97,100 +127,9 @@ navigator.sdk.ready()
     </code>
   </section>
 
-  <link rel="api" type="RAML 1.0" href="non-existing.raml" title="no-api">
+
   <script type="module" src="polyfill/polyfill.mjs"></script>
-  <script type="module">
-  function log(message) {
-    const node = document.getElementById('out');
-    let text = node.innerText;
-    if (text) {
-      text += '\n';
-    }
-    text += message;
-    node.innerText = text;
-  }
-  log('Initializing WebSDK...');
-  let echoSdk;
-  // Initialization
-  navigator.sdk.ready()
-  .then(() => {
-    log('WebSDK ready.');
-    log('Initializing SDK for "my-api"...');
-    return navigator.sdk.api('my-api');
-  })
-  .then((sdk) => {
-    echoSdk = sdk;
-    log('SDK ready.');
-    log('============');
-  })
-
-  .then(() => {
-    // Calling GET endpoint on `/` route
-    log('Getting data from "/" route...');
-    return echoSdk.api.get({
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-  })
-  .then((response) => {
-    log('GET response received with status: ' + response.status);
-    log('Reading response body...');
-    return response.json();
-  })
-  .then((data) => {
-    log('Body read.');
-    log(JSON.stringify(data, null, 2));
-    log('============');
-  })
-
-
-  .then(() => {
-    // Calling POST endpoint on `/` route
-    log('Posting data to "/" route...');
-    return echoSdk.api.post({
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        'demo-property': 'demo-value'
-      })
-    });
-  })
-  .then((response) => {
-    log('POST response received with status: ' + response.status);
-    log('Reading response body...');
-    return response.json();
-  })
-  .then((data) => {
-    log('Body read.');
-    log(JSON.stringify(data, null, 2));
-    log('============');
-  })
-
-  .then((data) => {
-    log('Setting Basic authorization credentials.');
-    const auth = {
-      type: 'Basic',
-      username: 'demo-user',
-      password: 'demo-password'
-    };
-    echoSdk.auth.setCredentials(auth);
-    log('============');
-    log('Getting authorized response (Basic).');
-    return echoSdk.api.auth.basic.get();
-  })
-  .then((response) => {
-    log('GET response received with status: ' + response.status);
-    log('Reading the body...');
-    return response.json();
-  })
-  .then((data) => {
-    log('Body read.');
-    log(JSON.stringify(data, null, 2));
-    console.log(data);
-  });
-  </script>
+  <script type="module" src="demo.js"></script>
 </body>
 
 </html>

@@ -1,4 +1,4 @@
-import {WebSdkApiFinder} from './api-finder.mjs';
+import { WebSdkApiFinder } from './api-finder.mjs';
 let refList;
 let refCache;
 /**
@@ -49,7 +49,7 @@ function processRemoved(nodes) {
  * @param {Array} mutationsList
  */
 function apiListObserver(mutationsList) {
-  for (let mutation of mutationsList) {
+  for (const mutation of mutationsList) {
     if (mutation.addedNodes.length) {
       processAdded(mutation.addedNodes);
     }

@@ -38,7 +38,7 @@ export class WebSdkApiFinder {
       document.removeEventListener('readystatechange', WebSdkApiFinder._waitUntilLoaded);
       return;
     }
-    const {readyState} = e.target;
+    const { readyState } = e.target;
     if (readyState === 'interactive' || readyState === 'complete') {
       document.removeEventListener('readystatechange', WebSdkApiFinder._waitUntilLoaded);
       loadedPromise(WebSdkApiFinder._lookup());
@@ -49,7 +49,7 @@ export class WebSdkApiFinder {
    * If the API type is not supported it is ignored.
    * @return {Promise<Array<Object>>} See `find()` for description
    */
-  static _lookup() {
+  static async _lookup() {
     const nodes = document.querySelectorAll('link[rel="api"]');
     const result = [];
     for (let i = 0, len = nodes.length; i < len; i++) {
@@ -58,7 +58,7 @@ export class WebSdkApiFinder {
         result[result.length] = apiDef;
       }
     }
-    return Promise.resolve(result);
+    return result;
   }
   /**
    * Collects information about an API from link node.
@@ -68,24 +68,26 @@ export class WebSdkApiFinder {
    * @return {Object|undefined} API definition. Contains `href`, `type`, and `title`.
    */
   static collectInfo(node) {
+    /* eslint-disable no-console */
     const type = node.getAttribute('type');
+    const prefix = 'WebSDK initialization error.';
     if (!type) {
-      console.warn('No type declaration on "link[api]" element.');
+      console.warn(`${prefix} No type declaration on "link[api]" element.`);
       return;
     }
     const upperType = type.toUpperCase();
     if (SUPPORTED_APIS.indexOf(upperType) === -1) {
-      console.warn(`Api type ${type} is not supported.`);
+      console.warn(`${prefix} Api type ${type} is not supported.`);
       return;
     }
     const title = node.getAttribute('title');
     if (!title) {
-      console.warn('API title not defined.');
+      console.warn(`${prefix} API title not defined.`);
       return;
     }
     const href = node.getAttribute('href');
     if (!href) {
-      console.warn('API href not defined.');
+      console.warn(`${prefix} API href not defined.`);
       return;
     }
     return {

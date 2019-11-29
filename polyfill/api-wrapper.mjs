@@ -1,5 +1,15 @@
-import {WebSdkRequest} from './api-request.mjs';
-import {WebSdkAuthentication} from './api-authentication.mjs';
+import { WebSdkRequest } from './api-request.mjs';
+import { WebSdkAuthentication } from './api-authentication.mjs';
+const amfInstance = Symbol();
+const wrapApi = Symbol();
+const wrapEndpoints = Symbol();
+const wrapEndpoint = Symbol();
+const constructPath = Symbol();
+const wrapMethods = Symbol();
+const wrapMethodApi = Symbol();
+const wrapMethodValidation = Symbol();
+const createRequest = Symbol();
+const makeValidation = Symbol();
 /**
  * Generates a JavaScript interface to interact with the API.
  * It generates path for each endpoint and method so functions can be
@@ -67,38 +77,59 @@ import {WebSdkAuthentication} from './api-authentication.mjs';
  * ```
  */
 export class WebSdkApiWrapper {
+  /**
+   * @param {Array|Object} amf AMF instance with parsed document.
+   */
   constructor(amf) {
-    this.__amf = amf;
+    this[amfInstance] = amf;
     this.api = {};
     this.validation = {};
     this.auth = new WebSdkAuthentication(amf);
-    this._wrap(amf);
+    this[wrapApi](amf);
+    Object.freeze(this.api);
+    Object.freeze(this);
   }
   /**
    * Generates JavaScript interface for the API.
    * @param {Object} amf Generated AMF model from the API spec file.
    */
-  _wrap(amf) {
-    this._wrapEndpoints(amf.encodes && amf.encodes.endPoints);
+  [wrapApi](amf) {
+    this[wrapEndpoints](amf.encodes && amf.encodes.endPoints);
   }
-
-  _wrapEndpoints(endpoints) {
+  /**
+   * Iterates over endpoints and creates an API structure
+   * on the `api` property.
+   *
+   * @param {Array<Object>} endpoints A list of AMF endpoints.
+   */
+  [wrapEndpoints](endpoints) {
     if (!endpoints) {
       return;
     }
     for (let i = 0, len = endpoints.length; i < len; i++) {
       const endpoint = endpoints[i];
-      this._wrapEndpoint(endpoint);
+      this[wrapEndpoint](endpoint);
     }
   }
-
-  _wrapEndpoint(endpoint) {
+  /**
+   * Creates a wrapper for an endpoint.
+   *
+   * @param {Object} endpoint AMF endpoint definition.
+   */
+  [wrapEndpoint](endpoint) {
     const path = endpoint.path.toString();
-    const sdk = this._constructPath(path);
-    this._wrapMethods(sdk.api, sdk.validation, endpoint.operations, endpoint.id);
+    const sdk = this[constructPath](path);
+    this[wrapMethods](sdk.api, sdk.validation, endpoint.operations, endpoint.id);
   }
-
-  _constructPath(path) {
+  /**
+   * Creates endpoint touch point for a path.
+   *
+   * @param {String} path A path to create endpoint for
+   * @return {Object} An object with `api` and `validation` properties.
+   * `api` is current API edge to attach methods to and `validation` is current
+   * validation object for the path.
+   */
+  [constructPath](path) {
     const parts = path.split('/');
     if (!parts[0]) {
       parts.shift();
@@ -107,6 +138,9 @@ export class WebSdkApiWrapper {
     let currentValidatrion = this.validation;
     while (parts.length) {
       let breadcrumb = parts.shift();
+      // TODO (pawel): URI parameter should be wrapped as a function
+      // that accepts parameter value as the only argument and returns
+      // api endpoint.
       if (breadcrumb[0] === '{') {
         breadcrumb = breadcrumb.substr(1);
       }
@@ -129,36 +163,34 @@ export class WebSdkApiWrapper {
     };
   }
 
-  _wrapMethods(apiTarget, validationTarget, operations, id) {
+  [wrapMethods](apiTarget, validationTarget, operations, id) {
     if (!operations || !operations.length) {
       return;
     }
     for (let i = 0, len = operations.length; i < len; i++) {
       const op = operations[i];
-      this._wrapMethodApi(apiTarget, op, id);
-      this._wrapMethodValidation(validationTarget, op, id);
+      this[wrapMethodApi](apiTarget, op, id);
+      this[wrapMethodValidation](validationTarget, op, id);
     }
   }
 
-  _wrapMethodApi(target, method, id) {
+  [wrapMethodApi](target, method, id) {
     const name = method.method.toString();
-    target[name] = this._makeRequest.bind(this, id, method.id);
+    target[name] = this[createRequest].bind(this, id, method.id);
   }
 
-  _wrapMethodValidation(target, method, id) {
+  [wrapMethodValidation](target, method, id) {
     const name = method.method.toString();
-    target[name] = this._makeValidation.bind(this, id, method.id);
+    target[name] = this[makeValidation].bind(this, id, method.id);
   }
 
-  _makeRequest(endpointId, methodId, init) {
-    const request = new WebSdkRequest(this.__amf, endpointId, methodId);
-    return request.execute(init, this.auth);
+  [createRequest](endpointId, methodId, init) {
+    const request = new WebSdkRequest(this[amfInstance], endpointId, methodId, init, this.auth);
+    return request;
+    // return request.execute(init, this.auth);
   }
 
-  _makeValidation(endpointId, methodId, init) {
-    if (!init) {
-      init = {};
-    }
+  [makeValidation](endpointId, methodId, init={}) {
     // Mocked for now. Not sure if there's a use case for this.
     return true;
   }

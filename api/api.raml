@@ -11,6 +11,24 @@ baseUriParameters:
     examples:
       Default: 8080
       Demo: 8081
+
+resourceTypes:
+  collection:
+    get:
+      queryParameters:
+        limit:
+          type: number
+          default: 5
+          description:
+            Number of resources to be returned by the API
+      responses:
+        200:
+          body:
+            type: <<resource>>
+    post:
+      body:
+        type: <<resource>>
+
 traits:
   RequestResponse:
     responses:
@@ -36,6 +54,19 @@ types:
   CookieList: !include types/cookies-list.raml
   RequestDataResponse: !include types/request-data-response.raml
   CookieListResponse: [BaseResponse, CookieList]
+  Person:
+    type: object
+    properties:
+      id:
+        type: string
+        description: UUID of the person
+      name:
+        type: string
+        description: Person's name
+      age:
+        type: number
+        description: |
+          Current age of the person
 
 securitySchemes:
   oauth2:
@@ -60,6 +91,10 @@ securitySchemes:
 
 /:
   get:
+    headers:
+      Accept:
+        type: string
+        default: application/json
     responses:
       200:
         body:
@@ -69,6 +104,19 @@ securitySchemes:
       type: object
       properties:
         test?: boolean
+/people:
+  type: { collection: { resource: Person } }
+  /{personId}:
+    uriParameters:
+      personId:
+        type: string
+        description: |
+          Person data store ID
+    get:
+      responses:
+        200:
+          body:
+            type: Person
 /auth/basic:
   securedBy: [basic]
   get:

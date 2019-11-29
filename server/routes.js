@@ -1,8 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const passport = require('passport');
-const {BasicStrategy} = require('passport-http');
+const { BasicStrategy } = require('passport-http');
 const cors = require('cors');
+const { DataGenerator } = require('./DataGenerator.js');
 
 const router = express.Router();
 router.use(bodyParser.json());
@@ -23,6 +24,33 @@ passport.use(new BasicStrategy(
   }
 ));
 
+/**
+ * Reads data from the incomming message.
+ * @param {Object} request The request object
+ * @return {Promise<Buffer>}
+ */
+async function readIncommingMessage(request) {
+  return new Promise((resolve, reject) => {
+    let message;
+    request.on('data', chunk => {
+      try {
+        if (message) {
+          message = Buffer.concat([message, chunk]);
+        } else {
+          message = chunk;
+        }
+      } catch (e) {
+        reject(e);
+        throw e;
+      }
+    });
+
+    request.on('end', () => {
+      resolve(message);
+    });
+  });
+}
+
 class ApiRoute {
   constructor() {
     this._indexHandler = this._indexHandler.bind(this);
@@ -34,20 +62,28 @@ class ApiRoute {
   createRoutes() {
     router.options('*', cors(this._processCors));
     router.get('/', cors(this._processCors), this._indexHandler);
+    router.get('/people', cors(this._processCors), this._collectionHandler);
+    router.get('/people/:id', cors(this._processCors), this._collectionItemHandler);
     router.post('/', cors(this._processCors), this._indexPostHandler);
     router.get('/auth/basic', cors(this._processCors),
       passport.authenticate('basic', {session: false}), this._basicAuthHandler);
   }
 
-  _sendEcho(req, res) {
+  async _sendEcho(req, res) {
     const data = {};
-    const body = req.body ? Object.assign(req.body) : undefined;
+    const dataLength = Number(req.headers['content-length']);
+    let body;
+    if (!isNaN(dataLength) && dataLength > 0) {
+      body = await readIncommingMessage(req);
+      body = body.toString();
+    }
     data.success = true;
     data.headers = req.headers;
     if (body) {
       data.body = body;
     }
-    res.set('Access-Control-Allow-Origin', 'http://127.0.0.1:8081');
+    // const buff = await readIncommingMessage(request);
+    // res.set('Access-Control-Allow-Origin', 'http://127.0.0.1:8081');
     res.send(data);
   }
 
@@ -63,6 +99,21 @@ class ApiRoute {
 
   _basicAuthHandler(req, res) {
     this._sendEcho(req, res);
+  }
+
+  _collectionHandler(req, res) {
+    const { limit } = req.query;
+    const itemsLimit = isNaN(limit) ? undefined : Number(limit);
+    const items = DataGenerator.createCollection(itemsLimit);
+    const response = {
+      items,
+    };
+    res.send(response);
+  }
+
+  _collectionItemHandler(req, res) {
+    const item = DataGenerator.createResource();
+    res.send(item);
   }
 
   _processCors(req, callback) {

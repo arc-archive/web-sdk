@@ -1,7 +1,7 @@
-import {WebSdkApiFinder} from './api-finder.mjs';
+import { WebSdkApiFinder } from './api-finder.mjs';
 import observeApis from './api-observer.mjs';
-import {WebSdkApiParser} from './api-parser.mjs';
-import {WebSdkApiWrapper} from './api-wrapper.mjs';
+import { WebSdkApiParser } from './api-parser.mjs';
+import { WebSdkApiWrapper } from './api-wrapper.mjs';
 /**
  * A flag that determines if the API was already initialized.
  * @type {Boolean}
@@ -31,14 +31,17 @@ const apiDefinitions = {};
  * @namespace
  */
 navigator.sdk = {};
-
 /**
- * Initializes the API
- * @return {Promise} [description]
+ * Initializes the SDK library.
+ * This looks for API definition in the document and collected the information
+ * about them.
+ * It does not parse API definition.
+ *
+ * @return {Promise}
  */
-navigator.sdk.ready = function() {
+navigator.sdk.ready = async function() {
   if (initialized) {
-    return Promise.resolved();
+    return;
   }
   if (initilizing) {
     return initPromise;
@@ -61,22 +64,25 @@ navigator.sdk.ready = function() {
 };
 /**
  * Generates SDK from the API definition.
+ * This is the main entry point to the API communication.
+ * The library automatically adds properties to reflect API structure defined
+ * in the API spec file.
+ *
  * @param {String} id API id represented as `title` attribute of the `link`.
  * @return {Promise<Object>} A promise resolved to the SDK object.
  */
-navigator.sdk.api = function(id) {
+navigator.sdk.api = async function(id) {
   if (!(id in apiDefinitions)) {
-    return Promise.reject('Unknown API ' + id);
+    throw new Error('Unknown API ' + id);
   }
   if (id in __cache__) {
-    return Promise.resolve(__cache__[id]);
+    return __cache__[id];
   }
   const info = apiDefinitions[id];
   const parser = new WebSdkApiParser(info);
-  return parser.parse()
-  .then((api) => {
-    const sdk = new WebSdkApiWrapper(api);
-    __cache__[id] = sdk;
-    return sdk;
-  });
+  const api = await parser.parse();
+  const sdk = new WebSdkApiWrapper(api);
+  /* eslint-disable require-atomic-updates */
+  __cache__[id] = sdk;
+  return sdk;
 };

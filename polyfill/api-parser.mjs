@@ -24,17 +24,15 @@ export class WebSdkApiParser {
    * Parses the API to AMF object.
    * @return {Promise<Object>} Promise is resolved to AMF object.
    */
-  parse() {
-    return amf.Core.init()
-    .then(() => this._parseFile())
-    .then((doc) => {
-      return this._validate(doc)
-      .then(() => doc)
-      .catch(() => doc);
-    })
-    .catch((cause) => {
+  async parse() {
+    try {
+      await amf.Core.init();
+      const doc = await this._parseFile();
+      await this._validate(doc);
+      return doc;
+    } catch (cause) {
       throw new Error(cause.toString());
-    });
+    }
   }
 
   _getApiTypes(type) {
@@ -64,23 +62,24 @@ export class WebSdkApiParser {
     return parser.parseFileAsync(file);
   }
 
-  _validate(doc) {
+  async _validate(doc) {
     let validateProfile;
     switch (this.apiInfo.type) {
       case 'RAML 1.0': validateProfile = amf.ProfileNames.RAML; break;
       case 'RAML 0.8': validateProfile = amf.ProfileNames.RAML08; break;
-      case 'OAS 1.0':
       case 'OAS 2.0':
       case 'OAS 3.0':
         validateProfile = amf.ProfileNames.OAS;
         break;
     }
-    return amf.AMF.validate(doc, validateProfile)
-    .then((result) => {
-      if (!result.conforms) {
-        console.warn('API validation error');
-        console.warn(result.toString());
-      }
-    });
+    if (!validateProfile) {
+      return;
+    }
+    const result = await amf.AMF.validate(doc, validateProfile)
+    if (!result.conforms) {
+      /* eslint-disable no-console */
+      console.warn('API validation error.');
+      console.warn(result.toString());
+    }
   }
 }
