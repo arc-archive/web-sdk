@@ -163,7 +163,7 @@ export class WebSdkRequest {
 
   _getRequestHeaders(init={}) {
     // Adds content type if required
-    const { method } = this;
+    const method = this[methodProperty];
     const initParams = init.headers || {};
     const initHeaders = new Headers(initParams);
     const initCt = initHeaders.get('content-type');
