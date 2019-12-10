@@ -6,7 +6,7 @@ const cors = require('cors');
 const { DataGenerator } = require('./DataGenerator.js');
 
 const router = express.Router();
-router.use(bodyParser.json());
+router.use(bodyParser.raw());
 
 passport.use(new BasicStrategy(
   function(userid, password, done) {
@@ -23,33 +23,6 @@ passport.use(new BasicStrategy(
     });
   }
 ));
-
-/**
- * Reads data from the incomming message.
- * @param {Object} request The request object
- * @return {Promise<Buffer>}
- */
-async function readIncommingMessage(request) {
-  return new Promise((resolve, reject) => {
-    let message;
-    request.on('data', chunk => {
-      try {
-        if (message) {
-          message = Buffer.concat([message, chunk]);
-        } else {
-          message = chunk;
-        }
-      } catch (e) {
-        reject(e);
-        throw e;
-      }
-    });
-
-    request.on('end', () => {
-      resolve(message);
-    });
-  });
-}
 
 class ApiRoute {
   constructor() {
@@ -71,19 +44,11 @@ class ApiRoute {
 
   async _sendEcho(req, res) {
     const data = {};
-    const dataLength = Number(req.headers['content-length']);
-    let body;
-    if (!isNaN(dataLength) && dataLength > 0) {
-      body = await readIncommingMessage(req);
-      body = body.toString();
-    }
     data.success = true;
     data.headers = req.headers;
-    if (body) {
-      data.body = body;
+    if (req.body) {
+      data.body = req.body.toString();
     }
-    // const buff = await readIncommingMessage(request);
-    // res.set('Access-Control-Allow-Origin', 'http://127.0.0.1:8081');
     res.send(data);
   }
 
