@@ -1,8 +1,10 @@
-> ## 🛠 Status: In Development
+# WebSDK polyfill and <web-sdk> web component
+
+> ## 🛠 Status: Abandoned
+
 > WebSDK proposal is currently in development. The polyfill and the components probably are not working just yet. Also the proposal is under internal discussion (MuleSoft) before it's going to be promoted externally. However, if you are interested in participating in the discussion, please, create an issue report or drop us an email arc@mulesoft.com
 
 
-# WebSDK polyfill and <web-sdk> web component
 
 This is a proof of concept of a proposition of new web platform API: WebSDK.
 
